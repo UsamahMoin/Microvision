@@ -1494,6 +1494,12 @@ a {
   z-index: 2;
 }
 
+.stage-item > div {
+  position: relative;
+  transform: translateY(9px);
+  z-index: 2;
+}
+
 .stage-item strong,
 .stage-item small {
   display: block;
