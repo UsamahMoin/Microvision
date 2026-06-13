@@ -4593,6 +4593,40 @@ footer > div:last-child a {
     max-width: none;
   }
 
+  .debugger-canvas {
+    height: auto;
+    min-height: 0;
+    padding: 12px;
+  }
+
+  .debugger-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    height: auto;
+  }
+
+  .stage-inspector {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-right: 0;
+  }
+
+  .logic-analyzer {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .cycle-memory {
+    border-top: 0;
+    grid-column: 1;
+  }
+
+  .control-bank {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .control-bank span {
+    white-space: normal;
+  }
+
   .workspace {
     height: auto;
   }
@@ -4699,7 +4733,43 @@ footer > div:last-child a {
   }
 
   .adder-chain {
+    gap: 8px;
+    margin-inline: -2px;
+    overflow-x: auto;
     padding-bottom: 10px;
+    scroll-snap-type: x proximity;
+  }
+
+  .full-adder {
+    flex: 0 0 112px;
+    min-width: 112px;
+    padding: 12px 8px;
+    scroll-snap-align: start;
+  }
+
+  .gate-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+
+  .gate-row span {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    line-height: 1.25;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    padding: 5px 3px;
+    white-space: normal;
+  }
+
+  .gate-row.output {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+
+  .gate-row.output span {
+    min-height: 38px;
   }
 
   .gate-inspector,
