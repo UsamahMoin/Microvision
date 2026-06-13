@@ -169,6 +169,64 @@ const GLOSSARIES: Record<LabId, Array<{ term: string; definition: string }>> = {
   ],
 };
 
+const LAB_READINGS: Record<
+  LabId,
+  {
+    title: string;
+    paragraphs: string[];
+    prompt: string;
+  }
+> = {
+  alu: {
+    title: "One result is really eight small decisions.",
+    paragraphs: [
+      "The binary rows at the top show the two input registers and the result register. When you step the circuit, the cursor begins at bit 0 and moves across one column at a time. Each card below is responsible for that same bit position, so the highlighted input, gate logic, carry, and result always describe one piece of the same calculation.",
+      "Addition makes the dependency easiest to see: a bit can be resolved only after the carry from the previous bit is known. The other operations reuse the same eight-bit view to show that an ALU is not just an adder. It also performs Boolean logic, inversion, and shifts, then records useful facts about the result in its status flags.",
+    ],
+    prompt: "Try stepping through 255 + 1. Watch the carry travel through every column, then inspect which flags turn on when the eight-bit result wraps to zero.",
+  },
+  pipeline: {
+    title: "The processor is doing several jobs at once.",
+    paragraphs: [
+      "Every row is an instruction and every column is a clock cycle. Moving diagonally across the grid shows how fetch, decode, execute, memory, and write-back overlap. That overlap is the source of pipeline throughput: a new instruction can begin before the previous one has finished.",
+      "The complication is dependency. When an instruction needs a result that is still somewhere ahead of it, the hardware must forward that value or stop the dependent instruction. Toggle forwarding and move through the cycles to see how a single unavailable register becomes a bubble, then becomes extra CPI.",
+    ],
+    prompt: "Compare the same instruction sequence with forwarding on and off. Count the empty slots rather than only reading the final CPI.",
+  },
+  cache: {
+    title: "Fast memory works by making a careful guess.",
+    paragraphs: [
+      "A cache assumes that recently used data, and data located nearby, will probably be needed again. Each address in the trace is split into fields that decide where its memory block may live. The cache grid then shows whether the required tag is already present, whether main memory must be consulted, and which old line is displaced.",
+      "Changing the mapping strategy changes the number of legal homes for each block. Direct mapping is simple but can make unrelated addresses fight for the same line. Associativity gives the hardware more choices, at the cost of additional lookup and replacement logic.",
+    ],
+    prompt: "Use a repeating trace that maps several addresses to the same index. Then change associativity and watch conflict misses disappear or move.",
+  },
+  branch: {
+    title: "The CPU must choose a path before it knows the answer.",
+    paragraphs: [
+      "A branch condition is often resolved after the fetch unit already needs another instruction address. Rather than wait, the predictor makes a guess and lets the pipeline continue. A correct guess hides that delay. A wrong guess means the speculative instructions came from the wrong path and must be flushed.",
+      "The predictor state shows how hardware learns from a tiny amount of history. A one-bit predictor follows the last outcome immediately, while a two-bit counter needs repeated evidence before changing a strong opinion. Run different patterns and notice that no predictor is best for every kind of branch.",
+    ],
+    prompt: "Run the loop-exit pattern with a two-bit predictor. The final not-taken outcome is wrong, but the predictor does not immediately forget the repeated taken history.",
+  },
+  builder: {
+    title: "A component is useful only when data can reach it.",
+    paragraphs: [
+      "This lab treats a CPU as a connected datapath rather than a collection of boxes. The selected challenge defines the journey an instruction must make. You choose the required components, but placement alone is not enough: explicit buses must carry instruction addresses, operands, results, and write-back data in the correct direction.",
+      "The design checks are intentionally strict because real hardware is strict. A missing multiplexer input or write-back connection does not produce a nearly working processor. It produces a broken path. Once the checker can trace the complete route, run the signal and watch the instruction move through the machine you assembled.",
+    ],
+    prompt: "After completing a valid datapath, remove one bus near the end. Use the failed checks to reason backward and identify which earlier work can no longer reach its destination.",
+  },
+  performance: {
+    title: "Performance is a balance, not a single fast number.",
+    paragraphs: [
+      "Clock speed tells only part of the story. A wider processor cannot sustain high throughput when cache misses keep it waiting, and an excellent cache cannot prevent wasted work after frequent branch mispredictions. This simplified model keeps those relationships visible while you tune one factor at a time.",
+      "The dashboard translates your choices into IPC, CPI, runtime, and bottleneck pressure. The values are educational estimates rather than measurements of a specific commercial processor, but the cause and effect are real: performance comes from the interaction between workload behavior and microarchitecture.",
+    ],
+    prompt: "Choose a memory-heavy workload and raise issue width first. Then improve cache hit rate. The different response shows why optimizing the wrong bottleneck buys very little.",
+  },
+};
+
 const clampByte = (value: number) => Math.max(0, Math.min(255, value || 0));
 const byte = (value: number) => (value & 0xff).toString(2).padStart(8, "0");
 
@@ -231,6 +289,8 @@ export function ArchitectureLab({
           {activeLab === "performance" && <PerformanceLab />}
         </section>
 
+        <LabReading lab={activeLab} />
+
         <KeywordGlossary lab={activeLab} />
 
         <section className="next-lab">
@@ -252,6 +312,26 @@ export function ArchitectureLab({
         </section>
       </main>
     </div>
+  );
+}
+
+function LabReading({ lab }: { lab: LabId }) {
+  const reading = LAB_READINGS[lab];
+
+  return (
+    <section className="lab-reading" aria-labelledby={`${lab}-reading-title`}>
+      <div className="lab-reading-heading">
+        <span>BEHIND THE VISUAL</span>
+        <h2 id={`${lab}-reading-title`}>{reading.title}</h2>
+      </div>
+      <div className="lab-reading-copy">
+        {reading.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+        <aside>
+          <span>TRY THIS</span>
+          <p>{reading.prompt}</p>
+        </aside>
+      </div>
+    </section>
   );
 }
 

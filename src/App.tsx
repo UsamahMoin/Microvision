@@ -1,4 +1,5 @@
 import {
+  ArrowRight,
   BookOpen,
   Box,
   Braces,
@@ -8,10 +9,12 @@ import {
   Clock3,
   Gauge,
   Github,
+  Heart,
   Layers3,
   MemoryStick,
   Pause,
   Play,
+  Quote,
   RotateCcw,
   StepForward,
   Zap,
@@ -34,6 +37,7 @@ const STAGES = [
 ] as const;
 
 type StageIndex = 0 | 1 | 2 | 3 | 4 | 5;
+type SitePage = "home" | "about";
 type Registers = Record<string, number>;
 type ParsedInstruction =
   | { op: "MOV"; dest: string; value: number; raw: string }
@@ -42,6 +46,20 @@ type ParsedInstruction =
 
 const initialRegisters = (): Registers =>
   Object.fromEntries(Array.from({ length: 8 }, (_, index) => [`R${index}`, 0]));
+
+const LAB_IDS: LabId[] = ["alu", "pipeline", "cache", "branch", "builder", "performance"];
+const BASE_URL = (import.meta as ImportMeta & { env: { BASE_URL: string } }).env.BASE_URL;
+const GITHUB_URL = "https://github.com/UsamahMoin/Microvision";
+
+function viewFromLocation() {
+  const params = new URLSearchParams(window.location.search);
+  const lab = params.get("lab");
+
+  return {
+    lab: LAB_IDS.includes(lab as LabId) ? lab as LabId : null,
+    page: params.get("page") === "about" ? "about" as SitePage : "home" as SitePage,
+  };
+}
 
 function parseProgram(source: string): ParsedInstruction[] {
   const parsed: ParsedInstruction[] = [];
@@ -92,12 +110,9 @@ function opcodeFor(instruction?: ParsedInstruction) {
 }
 
 function App() {
-  const [activeLab, setActiveLab] = useState<LabId | null>(() => {
-    const lab = new URLSearchParams(window.location.search).get("lab");
-    return ["alu", "pipeline", "cache", "branch", "builder", "performance"].includes(lab ?? "")
-      ? lab as LabId
-      : null;
-  });
+  const initialView = useMemo(viewFromLocation, []);
+  const [activeLab, setActiveLab] = useState<LabId | null>(initialView.lab);
+  const [activePage, setActivePage] = useState<SitePage>(initialView.page);
   const [program, setProgram] = useState(STARTER_PROGRAM);
   const instructions = useMemo(() => parseProgram(program), [program]);
   const [registers, setRegisters] = useState<Registers>(initialRegisters);
@@ -199,26 +214,45 @@ function App() {
 
   useEffect(() => {
     const handleNavigation = () => {
-      const lab = new URLSearchParams(window.location.search).get("lab");
-      setActiveLab(
-        ["alu", "pipeline", "cache", "branch", "builder", "performance"].includes(lab ?? "")
-          ? lab as LabId
-          : null,
-      );
+      const view = viewFromLocation();
+      setActiveLab(view.lab);
+      setActivePage(view.page);
     };
     window.addEventListener("popstate", handleNavigation);
     return () => window.removeEventListener("popstate", handleNavigation);
   }, []);
 
-  const launchSimulator = () => {
-    simulatorRef.current?.scrollIntoView({ behavior: "smooth" });
+  const navigateHome = (section?: "learn") => {
+    const url = section ? `${BASE_URL}#${section}` : BASE_URL;
+    window.history.pushState({}, "", url);
+    setActiveLab(null);
+    setActivePage("home");
+    window.setTimeout(() => {
+      if (section) {
+        document.getElementById(section)?.scrollIntoView({ behavior: "smooth" });
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }, 0);
+  };
+
+  const navigateAbout = () => {
+    window.history.pushState({}, "", `${BASE_URL}?page=about`);
+    setActiveLab(null);
+    setActivePage("about");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const navigateLab = (lab: LabId | null) => {
-    const baseUrl = (import.meta as ImportMeta & { env: { BASE_URL: string } }).env.BASE_URL;
-    const url = lab ? `${baseUrl}?lab=${lab}` : baseUrl;
+    if (!lab) {
+      navigateHome("learn");
+      return;
+    }
+
+    const url = `${BASE_URL}?lab=${lab}`;
     window.history.pushState({}, "", url);
     setActiveLab(lab);
+    setActivePage("home");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -232,28 +266,24 @@ function App() {
     );
   }
 
+  if (activePage === "about") {
+    return (
+      <AboutPage
+        onHome={() => navigateHome()}
+        onLearn={() => navigateHome("learn")}
+        onAbout={navigateAbout}
+      />
+    );
+  }
+
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <a className="brand" href="#" aria-label="MicroVision home">
-          <span className="brand-mark">
-            <span />
-            <span />
-            <span />
-          </span>
-          <span>microvision</span>
-        </a>
-        <nav className="nav-links" aria-label="Primary navigation">
-          <button onClick={launchSimulator}>Simulator</button>
-          <a href="#architecture">Architecture</a>
-          <a href="#learn">Learn</a>
-          <a href="#about">About</a>
-        </nav>
-        <a className="github-link" href="https://github.com" aria-label="View on GitHub">
-          <Github size={18} />
-          <span>GitHub</span>
-        </a>
-      </header>
+      <SiteHeader
+        activePage="home"
+        onHome={() => navigateHome()}
+        onLearn={() => navigateHome("learn")}
+        onAbout={navigateAbout}
+      />
 
       <main>
         <section className="hero" id="architecture">
@@ -465,17 +495,178 @@ function App() {
         </section>
       </main>
 
-      <footer id="about">
-        <div className="footer-brand">
-          <span className="brand-mark"><span /><span /><span /></span>
-          microvision
-        </div>
-        <p>Built to make computer architecture visible.</p>
-        <div>
-          <a href="#learn"><BookOpen size={16} /> Documentation</a>
-          <a href="https://github.com"><Github size={16} /> GitHub</a>
-        </div>
-      </footer>
+      <SiteFooter onLearn={() => navigateHome("learn")} onAbout={navigateAbout} />
+    </div>
+  );
+}
+
+function SiteHeader({
+  activePage,
+  onHome,
+  onLearn,
+  onAbout,
+}: {
+  activePage: SitePage;
+  onHome: () => void;
+  onLearn: () => void;
+  onAbout: () => void;
+}) {
+  return (
+    <header className="topbar">
+      <button className="brand site-brand-button" onClick={onHome} aria-label="MicroVision home">
+        <span className="brand-mark">
+          <span />
+          <span />
+          <span />
+        </span>
+        <span>microvision</span>
+      </button>
+      <nav className="nav-links" aria-label="Primary navigation">
+        <button onClick={onLearn}>Learn More</button>
+        <button
+          className={activePage === "about" ? "active" : ""}
+          onClick={onAbout}
+          aria-current={activePage === "about" ? "page" : undefined}
+        >
+          About
+        </button>
+      </nav>
+      <a className="github-link" href={GITHUB_URL} aria-label="View MicroVision on GitHub">
+        <Github size={18} />
+        <span>GitHub</span>
+      </a>
+    </header>
+  );
+}
+
+function SiteFooter({
+  onLearn,
+  onAbout,
+}: {
+  onLearn: () => void;
+  onAbout: () => void;
+}) {
+  return (
+    <footer>
+      <div className="footer-brand">
+        <span className="brand-mark"><span /><span /><span /></span>
+        microvision
+      </div>
+      <p>Built to make computer architecture visible.</p>
+      <div>
+        <button onClick={onLearn}><BookOpen size={16} /> Learn More</button>
+        <button onClick={onAbout}><Heart size={16} /> About</button>
+        <a href={GITHUB_URL}><Github size={16} /> GitHub</a>
+      </div>
+    </footer>
+  );
+}
+
+function AboutPage({
+  onHome,
+  onLearn,
+  onAbout,
+}: {
+  onHome: () => void;
+  onLearn: () => void;
+  onAbout: () => void;
+}) {
+  return (
+    <div className="app-shell about-page">
+      <SiteHeader
+        activePage="about"
+        onHome={onHome}
+        onLearn={onLearn}
+        onAbout={onAbout}
+      />
+
+      <main className="about-main">
+        <section className="about-hero">
+          <div>
+            <span className="about-kicker">WHY MICROVISION EXISTS</span>
+            <h1>I wanted students to see the machine I kept describing.</h1>
+          </div>
+          <blockquote>
+            <Quote size={28} />
+            <p>A CPU stops feeling like magic when you can follow the data.</p>
+          </blockquote>
+        </section>
+
+        <section className="about-story">
+          <div className="about-story-label">
+            <span>THE BRAINCHILD</span>
+            <Heart size={20} />
+          </div>
+          <div className="about-story-copy">
+            <p>
+              MicroVision is a brainchild born from years of teaching computer
+              hardware, architecture, and operating systems. I have drawn the
+              same arrows on whiteboards, walked through the same fetch-decode-
+              execute cycle, and watched students understand every individual
+              definition while still wondering what the computer is actually
+              doing.
+            </p>
+            <p>
+              I wanted a place where those arrows could move. A register should
+              visibly change. A carry bit should travel into the next adder. A
+              pipeline stall should feel like lost time, and a cache miss should
+              show why memory can hold an entire processor back. The goal is not
+              to make architecture look complicated. It is to make the hidden
+              parts honest and observable.
+            </p>
+            <p>
+              I love computer science because the deepest ideas are both precise
+              and creative. Under every app, game, compiler, and operating system
+              is a physical machine making tiny decisions at astonishing speed.
+              MicroVision is my attempt to slow that machine down long enough for
+              someone to build intuition, ask better questions, and enjoy the
+              beauty of how it all fits together.
+            </p>
+          </div>
+        </section>
+
+        <section className="about-principles">
+          <article>
+            <span>01</span>
+            <h2>Make it visible.</h2>
+            <p>
+              If data moves, show the path. If state changes, show the old and
+              new value. If the CPU waits, make the waiting impossible to miss.
+            </p>
+          </article>
+          <article>
+            <span>02</span>
+            <h2>Let curiosity lead.</h2>
+            <p>
+              The labs are meant to be touched. Change an input, make a wrong
+              prediction, break a datapath, and use the response to understand why.
+            </p>
+          </article>
+          <article>
+            <span>03</span>
+            <h2>Teach the real idea.</h2>
+            <p>
+              The models are intentionally approachable, but the vocabulary and
+              cause-and-effect relationships come from real computer architecture.
+            </p>
+          </article>
+        </section>
+
+        <section className="about-closing">
+          <blockquote>
+            “Understanding begins when the invisible becomes observable.”
+          </blockquote>
+          <div>
+            <span>KEEP EXPLORING</span>
+            <h2>Open a lab and follow one idea all the way through.</h2>
+            <button onClick={onLearn}>
+              Explore the labs <ArrowRight size={18} />
+            </button>
+          </div>
+        </section>
+      </main>
+
+      <SiteFooter onLearn={onLearn} onAbout={onAbout} />
     </div>
   );
 }
