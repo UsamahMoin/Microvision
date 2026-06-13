@@ -1822,11 +1822,11 @@ footer > div:last-child a {
   border: 1px solid transparent;
   display: flex;
   font-family: var(--mono);
-  font-size: 8px;
-  height: 28px;
+  font-size: 11px;
+  height: 32px;
   justify-content: center;
   opacity: 0.45;
-  width: 28px;
+  width: 32px;
 }
 
 .lab-nav button:hover {
@@ -1843,7 +1843,7 @@ footer > div:last-child a {
   align-items: center;
   display: flex;
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 11px;
   gap: 8px;
   justify-self: end;
   letter-spacing: 0.06em;
@@ -4655,7 +4655,7 @@ footer > div:last-child a {
   }
 
   .back-home {
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .lab-main {
