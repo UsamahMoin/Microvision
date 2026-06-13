@@ -215,7 +215,8 @@ function App() {
   };
 
   const navigateLab = (lab: LabId | null) => {
-    const url = lab ? `/?lab=${lab}` : "/";
+    const baseUrl = (import.meta as ImportMeta & { env: { BASE_URL: string } }).env.BASE_URL;
+    const url = lab ? `${baseUrl}?lab=${lab}` : baseUrl;
     window.history.pushState({}, "", url);
     setActiveLab(lab);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1135,17 +1136,22 @@ function FeatureCard({
   onOpen: () => void;
 }) {
   return (
-    <article className={`feature-card ${color}`}>
+    <button
+      type="button"
+      className={`feature-card ${color}`}
+      onClick={onOpen}
+      aria-label={`Explore ${title}`}
+    >
       <div className="feature-card-top">
         <span className="feature-icon">{icon}</span>
         <small>{index}</small>
       </div>
-      <h3>{title}</h3>
-      <p>{body}</p>
-      <button aria-label={`Explore ${title}`} onClick={onOpen}>
+      <span className="feature-card-title">{title}</span>
+      <span className="feature-card-body">{body}</span>
+      <span className="feature-card-action" aria-hidden="true">
         Explore <ChevronRight size={15} />
-      </button>
-    </article>
+      </span>
+    </button>
   );
 }
 

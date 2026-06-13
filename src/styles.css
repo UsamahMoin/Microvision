@@ -1637,17 +1637,33 @@ a {
 }
 
 .feature-card {
+  appearance: none;
+  background: transparent;
   border-bottom: 1px solid var(--line);
+  border-left: 0;
   border-right: 1px solid var(--line);
+  border-top: 0;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: inherit;
   min-height: 250px;
   padding: 25px;
   position: relative;
+  text-align: left;
   transition: background 180ms, transform 180ms;
+  width: 100%;
 }
 
 .feature-card:hover {
   background: rgba(255, 255, 255, 0.45);
   transform: translateY(-3px);
+}
+
+.feature-card:focus-visible {
+  box-shadow: inset 0 0 0 3px var(--card-accent);
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+  z-index: 1;
 }
 
 .feature-card-top {
@@ -1672,26 +1688,26 @@ a {
   opacity: 0.35;
 }
 
-.feature-card h3 {
+.feature-card-title {
+  display: block;
   font-size: 19px;
+  font-weight: 700;
   letter-spacing: -0.03em;
   margin: 35px 0 12px;
 }
 
-.feature-card p {
+.feature-card-body {
   color: #666b67;
+  display: block;
   font-size: 12px;
   line-height: 1.65;
   margin: 0;
   max-width: 280px;
 }
 
-.feature-card button {
+.feature-card-action {
   align-items: center;
-  background: none;
-  border: 0;
   bottom: 23px;
-  cursor: pointer;
   display: flex;
   font-family: var(--mono);
   font-size: 8px;
@@ -1701,6 +1717,15 @@ a {
   letter-spacing: 0.08em;
   position: absolute;
   text-transform: uppercase;
+}
+
+.feature-card:hover .feature-card-action svg,
+.feature-card:focus-visible .feature-card-action svg {
+  transform: translateX(4px);
+}
+
+.feature-card-action svg {
+  transition: transform 180ms;
 }
 
 .feature-card.lime { --card-accent: #c8ff37; }
@@ -3623,12 +3648,12 @@ footer > div:last-child a {
 }
 
 /* Readability and accessible contrast */
-.feature-card p {
+.feature-card-body {
   color: #4b514c;
   font-size: 14px;
 }
 
-.feature-card button {
+.feature-card-action {
   font-size: 10px;
 }
 
