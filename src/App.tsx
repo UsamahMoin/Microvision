@@ -921,8 +921,9 @@ function CpuVisualization({
     },
   ];
   const visibleCycle = instruction ? cycles + 1 : cycles;
-  const firstVisibleCycle = Math.max(1, visibleCycle - 5);
-  const cycleTape = Array.from({ length: 8 }, (_, index) => {
+  const visibleTapeLength = Math.min(8, Math.max(1, visibleCycle));
+  const firstVisibleCycle = Math.max(1, visibleCycle - visibleTapeLength + 1);
+  const cycleTape = Array.from({ length: visibleTapeLength }, (_, index) => {
     const cycle = firstVisibleCycle + index;
     const cycleStage = (cycle - 1) % STAGES.length;
     const isCurrent = Boolean(instruction) && cycle === visibleCycle;
@@ -1015,16 +1016,21 @@ function CpuVisualization({
           <section className="cycle-memory">
             <div className="debugger-heading">
               <span>CYCLE MEMORY</span>
-              <i>LAST 8 TICKS</i>
+              <i>RETIRED ← CLOCK FLOW ← NEW TICK</i>
             </div>
-            <div className="cycle-tape">
-              {cycleTape.map((tick) => (
-                <div className={tick.state} key={tick.cycle}>
-                  <span>T{String(tick.cycle).padStart(2, "0")}</span>
-                  <strong>{tick.stage.short}</strong>
-                  <small>I{tick.instruction}</small>
-                </div>
-              ))}
+            <div
+              className={`cycle-tape-window ${cycleTape.length === 8 ? "is-full" : ""}`}
+              key={`${visibleCycle}-${instruction ? "live" : "halt"}`}
+            >
+              <div className={`cycle-tape ${cycles > 0 ? "advancing" : ""}`}>
+                {cycleTape.map((tick) => (
+                  <div className={tick.state} key={tick.cycle}>
+                    <span>T{String(tick.cycle).padStart(2, "0")}</span>
+                    <strong>{tick.stage.short}</strong>
+                    <small>I{tick.instruction}</small>
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
         </div>
