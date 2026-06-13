@@ -267,9 +267,12 @@ function App() {
           ref={simulatorRef}
         >
           <div className="section-heading">
-            <div>
-              <span className="section-number">02 / LIVE SIMULATOR</span>
+            <div className="simulator-intro">
               <h2>Watch the CPU think.</h2>
+              <p>
+                Write assembly, run it cycle by cycle, and watch instructions,
+                control signals, registers, buses, and memory change in real time.
+              </p>
             </div>
             <div
               className={`live-status ${running ? "is-running" : ""} ${!currentInstruction ? "is-complete" : ""}`}
@@ -403,11 +406,10 @@ function App() {
 
         <section className="feature-section" id="learn">
           <div className="feature-intro">
-            <span className="section-number">03 / GO DEEPER</span>
-            <h2>From first instruction<br />to full architecture.</h2>
+            <h2>Explore the systems<br />behind every cycle.</h2>
             <p>
-              Every layer is interactive. Start with registers and work your
-              way down to the gates.
+              Open a focused lab to experiment with arithmetic, pipelines,
+              caches, branch prediction, datapath design, and performance.
             </p>
           </div>
           <div className="feature-grid">

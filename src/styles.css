@@ -661,11 +661,15 @@ a {
   font-size: clamp(42px, 5vw, 70px);
   letter-spacing: -0.06em;
   line-height: 1;
-  margin: 20px 0 0;
+  margin: 0;
 }
 
-.simulator-section .section-number {
+.simulator-intro p {
   color: #555d57;
+  font-size: 15px;
+  line-height: 1.65;
+  margin: 22px 0 0;
+  max-width: 690px;
 }
 
 .live-status {
@@ -1639,10 +1643,10 @@ a {
 
 .feature-intro p {
   color: #646964;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.7;
-  margin: 28px 0 0;
-  max-width: 380px;
+  margin: 24px 0 0;
+  max-width: 430px;
 }
 
 .feature-grid {
