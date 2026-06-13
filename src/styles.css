@@ -772,9 +772,9 @@ a {
 
 .execution-controls button {
   align-items: center;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.13);
-  color: rgba(255, 255, 255, 0.7);
+  background: #eceee9;
+  border: 1px solid #eceee9;
+  color: var(--ink);
   cursor: pointer;
   display: flex;
   font-family: var(--mono);
@@ -786,7 +786,7 @@ a {
 
 .execution-controls button:disabled {
   cursor: not-allowed;
-  opacity: 0.3;
+  opacity: 0.55;
 }
 
 .execution-controls .run-control {
@@ -1044,8 +1044,8 @@ a {
 
 .transform-stack > div {
   align-items: center;
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #e7eae5;
+  border: 1px solid #e7eae5;
   display: grid;
   gap: 10px;
   grid-template-columns: 86px 1fr;
@@ -1059,14 +1059,14 @@ a {
 }
 
 .transform-stack span {
-  color: rgba(255, 255, 255, 0.28);
+  color: #4a504b;
   font-family: var(--mono);
   font-size: 8px;
   letter-spacing: 0.08em;
 }
 
 .transform-stack code {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--ink);
   font-family: var(--mono);
   font-size: 9px;
   overflow: hidden;
@@ -1076,6 +1076,10 @@ a {
 
 .transform-action code {
   color: var(--sim-accent);
+}
+
+.transform-action span {
+  color: color-mix(in srgb, var(--sim-accent) 74%, white);
 }
 
 .transform-stack > b {
@@ -1096,8 +1100,9 @@ a {
 
 .control-bank span {
   align-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.28);
+  background: #e7eae5;
+  border: 1px solid #e7eae5;
+  color: var(--ink);
   display: flex;
   font-family: var(--mono);
   font-size: 8px;
@@ -1108,14 +1113,15 @@ a {
 }
 
 .control-bank i {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.32);
+  background: #cfd4ce;
+  color: var(--ink);
   font-style: normal;
   font-size: 8px;
   padding: 3px 5px;
 }
 
 .control-bank span.on {
+  background: transparent;
   border-color: var(--sim-accent);
   color: var(--sim-accent);
 }
@@ -1230,9 +1236,9 @@ a {
 
 .bus-decoder i {
   align-items: center;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.25);
+  background: #e7eae5;
+  border: 1px solid #e7eae5;
+  color: var(--ink);
   display: flex;
   font-family: var(--mono);
   font-size: 10px;
@@ -1263,7 +1269,9 @@ a {
 }
 
 .cycle-tape > div {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #e7eae5;
+  border: 1px solid #e7eae5;
+  color: var(--ink);
   display: grid;
   grid-template-columns: 1fr auto;
   min-width: 0;
@@ -1272,7 +1280,7 @@ a {
 
 .cycle-tape span,
 .cycle-tape small {
-  color: rgba(255, 255, 255, 0.28);
+  color: #4a504b;
   font-family: var(--mono);
   font-size: 8px;
 }
@@ -1290,11 +1298,11 @@ a {
 }
 
 .cycle-tape .complete {
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: #e7eae5;
 }
 
 .cycle-tape .complete strong {
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--ink);
 }
 
 .cycle-tape .current {
@@ -1310,7 +1318,7 @@ a {
 }
 
 .cycle-tape .queued {
-  opacity: 0.35;
+  opacity: 0.72;
 }
 
 .state-section {
@@ -1395,8 +1403,9 @@ a {
 }
 
 .control-signals > div:last-child span {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.25);
+  background: #e7eae5;
+  border: 1px solid #e7eae5;
+  color: var(--ink);
   font-family: var(--mono);
   font-size: 8px;
   letter-spacing: 0.04em;
@@ -1472,8 +1481,9 @@ a {
 
 .stage-node {
   align-items: center;
-  background: #202521;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #e7eae5;
+  border: 1px solid #e7eae5;
+  color: var(--ink);
   display: flex;
   flex: 0 0 36px;
   font-family: var(--mono);
