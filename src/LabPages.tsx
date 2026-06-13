@@ -245,8 +245,7 @@ export function ArchitectureLab({
     <div className={`lab-page lab-${lab.color}`}>
       <header className="lab-header">
         <button className="lab-brand" onClick={onBack} aria-label="Return to MicroVision home">
-          <span className="brand-mark"><span /><span /><span /></span>
-          <span>microvision</span>
+          Home
         </button>
         <nav className="lab-nav" aria-label="Architecture labs">
           {LABS.map((item) => (

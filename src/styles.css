@@ -77,11 +77,13 @@ a {
   letter-spacing: -0.02em;
 }
 
-.site-brand-button {
+.site-home-link {
   background: none;
   border: 0;
   cursor: pointer;
   justify-self: start;
+  font-size: 12px;
+  font-weight: 600;
   padding: 0;
 }
 
@@ -134,13 +136,19 @@ a {
   border-bottom: 1px solid var(--ink);
 }
 
-.github-link {
+.social-links {
+  align-items: center;
+  display: flex;
+  gap: 20px;
+  justify-self: end;
+}
+
+.social-links a {
   align-items: center;
   display: flex;
   font-size: 12px;
   font-weight: 600;
   gap: 8px;
-  justify-self: end;
 }
 
 .section-number {
@@ -4875,10 +4883,6 @@ footer > div:last-child button {
     padding: 0 14px;
   }
 
-  .site-brand-button > span:last-child {
-    display: none;
-  }
-
   .nav-links {
     gap: 12px;
   }
@@ -4888,12 +4892,16 @@ footer > div:last-child button {
     font-size: 10px;
   }
 
-  .github-link span {
+  .social-links {
+    gap: 10px;
+  }
+
+  .social-links a span {
     display: none;
   }
 
-  .github-link {
-    display: none;
+  .social-links a {
+    gap: 0;
   }
 
   .hero {

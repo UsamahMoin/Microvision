@@ -13,6 +13,7 @@ import {
   Layers3,
   MemoryStick,
   Pause,
+  PenLine,
   Play,
   Quote,
   RotateCcw,
@@ -49,7 +50,8 @@ const initialRegisters = (): Registers =>
 
 const LAB_IDS: LabId[] = ["alu", "pipeline", "cache", "branch", "builder", "performance"];
 const BASE_URL = (import.meta as ImportMeta & { env: { BASE_URL: string } }).env.BASE_URL;
-const GITHUB_URL = "https://github.com/UsamahMoin/Microvision";
+const GITHUB_URL = "https://github.com/UsamahMoin";
+const MEDIUM_URL = "https://medium.com/@usamahmoin";
 
 function viewFromLocation() {
   const params = new URLSearchParams(window.location.search);
@@ -513,13 +515,8 @@ function SiteHeader({
 }) {
   return (
     <header className="topbar">
-      <button className="brand site-brand-button" onClick={onHome} aria-label="MicroVision home">
-        <span className="brand-mark">
-          <span />
-          <span />
-          <span />
-        </span>
-        <span>microvision</span>
+      <button className="site-home-link" onClick={onHome} aria-label="MicroVision home">
+        Home
       </button>
       <nav className="nav-links" aria-label="Primary navigation">
         <button onClick={onLearn}>Learn More</button>
@@ -531,10 +528,16 @@ function SiteHeader({
           About
         </button>
       </nav>
-      <a className="github-link" href={GITHUB_URL} aria-label="View MicroVision on GitHub">
-        <Github size={18} />
-        <span>GitHub</span>
-      </a>
+      <div className="social-links">
+        <a href={GITHUB_URL} aria-label="Visit Usamah Moin on GitHub">
+          <Github size={17} />
+          <span>GitHub</span>
+        </a>
+        <a href={MEDIUM_URL} aria-label="Read Usamah Moin on Medium">
+          <PenLine size={17} />
+          <span>Medium</span>
+        </a>
+      </div>
     </header>
   );
 }
@@ -557,6 +560,7 @@ function SiteFooter({
         <button onClick={onLearn}><BookOpen size={16} /> Learn More</button>
         <button onClick={onAbout}><Heart size={16} /> About</button>
         <a href={GITHUB_URL}><Github size={16} /> GitHub</a>
+        <a href={MEDIUM_URL}><PenLine size={16} /> Medium</a>
       </div>
     </footer>
   );
