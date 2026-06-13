@@ -10,6 +10,7 @@ import {
   Layers3,
   MemoryStick,
   Minus,
+  Pause,
   Play,
   Plus,
   RotateCcw,
@@ -17,7 +18,7 @@ import {
   Trash2,
   Zap,
 } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 export type LabId =
   | "alu"
@@ -432,10 +433,23 @@ function AluExplorer() {
     setActiveBit((value) => (value + 1) % 8);
   };
 
+  useEffect(() => {
+    if (!running) return;
+    if (activeBit >= 7) {
+      setRunning(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setActiveBit((value) => value + 1), 420);
+    return () => window.clearTimeout(timer);
+  }, [activeBit, running]);
+
   const run = () => {
+    if (running) {
+      setRunning(false);
+      return;
+    }
+    if (activeBit >= 7) setActiveBit(0);
     setRunning(true);
-    setActiveBit(7);
-    window.setTimeout(() => setRunning(false), 650);
   };
 
   const inspectorEquation = isArithmetic
@@ -455,7 +469,10 @@ function AluExplorer() {
           <>
             <button onClick={reset}><RotateCcw size={14} /> Reset</button>
             <button onClick={step}><StepForward size={14} /> Step bit</button>
-            <button className="lab-run" onClick={run}><Play size={13} fill="currentColor" /> Run</button>
+            <button className="lab-run" onClick={run}>
+              {running ? <Pause size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" />}
+              {running ? "Pause" : "Run bits"}
+            </button>
           </>
         }
       />
@@ -470,6 +487,7 @@ function AluExplorer() {
                 onClick={() => {
                   setOperation(item.id);
                   setActiveBit(0);
+                  setRunning(false);
                 }}
               >
                 <strong>{item.id}</strong>
@@ -478,8 +496,8 @@ function AluExplorer() {
             ))}
           </div>
           <span className="control-label operand-heading">OPERANDS</span>
-          <NumberControl label="INPUT A" value={left} onChange={setLeft} />
-          <NumberControl label="INPUT B" value={right} onChange={setRight} disabled={!operationMeta.usesRight} />
+          <NumberControl label="INPUT A" value={left} onChange={(value) => { setLeft(value); setActiveBit(0); setRunning(false); }} />
+          <NumberControl label="INPUT B" value={right} onChange={(value) => { setRight(value); setActiveBit(0); setRunning(false); }} disabled={!operationMeta.usesRight} />
           <div className="equation-card">
             <span>DECIMAL RESULT</span>
             <strong>{equation}</strong>
@@ -562,21 +580,42 @@ const PIPELINE_INSTRUCTIONS = [
 ];
 
 function pipelineStage(row: number, cycle: number, forwarding: boolean) {
-  let offset = row;
-  if (!forwarding && row >= 1) offset += 1;
-  const position = cycle - row;
+  const stages = ["IF", "ID", "EX", "MEM", "WB"];
+  const position = cycle - row - 1;
+  if (position < 0) return "";
   if (!forwarding && row >= 1) {
-    if (position === 2) return "STALL";
-    if (position > 2) return ["IF", "ID", "EX", "MEM", "WB"][position - 1] ?? "";
+    if (position === 1) return "STALL";
+    if (position > 1) return stages[position - 1] ?? "";
   }
-  return ["IF", "ID", "EX", "MEM", "WB"][cycle - offset] ?? "";
+  return stages[position] ?? "";
 }
 
 function PipelineLab() {
   const [cycle, setCycle] = useState(1);
   const [forwarding, setForwarding] = useState(false);
+  const [running, setRunning] = useState(false);
   const maxCycle = forwarding ? 8 : 9;
   const hazardActive = cycle >= 3 && cycle <= 6;
+  const currentActivity = PIPELINE_INSTRUCTIONS
+    .map((instruction, row) => ({ ...instruction, stage: pipelineStage(row, cycle, forwarding) }))
+    .filter((instruction) => instruction.stage);
+  const cycleEvent = currentActivity.some((instruction) => instruction.stage === "STALL")
+    ? "Hazard unit freezes decode and inserts a bubble."
+    : forwarding && hazardActive
+      ? "Forwarding network bypasses a result into the next execute stage."
+      : currentActivity.some((instruction) => instruction.stage === "WB")
+        ? "A completed result is committed to the register file."
+        : "Instructions advance one stage on this clock edge.";
+
+  useEffect(() => {
+    if (!running) return;
+    if (cycle >= maxCycle) {
+      setRunning(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setCycle((value) => Math.min(maxCycle, value + 1)), 650);
+    return () => window.clearTimeout(timer);
+  }, [cycle, maxCycle, running]);
 
   return (
     <>
@@ -585,9 +624,16 @@ function PipelineLab() {
         status={`Cycle ${cycle} of ${maxCycle} · ${forwarding ? "Forwarding enabled" : "Stall on RAW hazard"}`}
         actions={
           <>
-            <button onClick={() => setCycle(1)}><RotateCcw size={14} /> Reset</button>
-            <button onClick={() => setCycle((value) => Math.min(maxCycle, value + 1))}>
+            <button onClick={() => { setCycle(1); setRunning(false); }}><RotateCcw size={14} /> Reset</button>
+            <button onClick={() => { setRunning(false); setCycle((value) => Math.min(maxCycle, value + 1)); }}>
               <StepForward size={14} /> Next cycle
+            </button>
+            <button className="lab-run" onClick={() => {
+              if (!running && cycle >= maxCycle) setCycle(1);
+              setRunning((value) => !value);
+            }}>
+              {running ? <Pause size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" />}
+              {running ? "Pause" : "Run"}
             </button>
           </>
         }
@@ -600,6 +646,7 @@ function PipelineLab() {
             onClick={() => {
               setForwarding((value) => !value);
               setCycle(1);
+              setRunning(false);
             }}
           >
             <span><i /></span>
@@ -627,9 +674,22 @@ function PipelineLab() {
               min="1"
               max={maxCycle}
               value={cycle}
-              onChange={(event) => setCycle(Number(event.target.value))}
+              onChange={(event) => { setCycle(Number(event.target.value)); setRunning(false); }}
             />
             <strong>{String(cycle).padStart(2, "0")}</strong>
+          </div>
+          <div className={`pipeline-event ${hazardActive ? "hazard" : ""}`}>
+            <div>
+              <span>CLOCK EDGE {String(cycle).padStart(2, "0")}</span>
+              <strong>{cycleEvent}</strong>
+            </div>
+            <div className="pipeline-activity">
+              {currentActivity.map((instruction) => (
+                <span className={`pipe-${instruction.stage.toLowerCase()}`} key={instruction.id}>
+                  <b>{instruction.id}</b>{instruction.stage}
+                </span>
+              ))}
+            </div>
           </div>
           <div className="pipeline-table">
             <div className="pipeline-row pipeline-head">
@@ -672,6 +732,12 @@ function PipelineLab() {
 }
 
 type CacheLine = { tag: number | null; address: number | null; age: number };
+type CacheAccess = {
+  address: number;
+  line: number;
+  result: "HIT" | "MISS" | "EVICT";
+  evicted: number | null;
+};
 
 function CacheLab() {
   const [mapping, setMapping] = useState<"direct" | "2-way" | "fully">("direct");
@@ -684,6 +750,8 @@ function CacheLab() {
   const [misses, setMisses] = useState(0);
   const [lastResult, setLastResult] = useState<"HIT" | "MISS" | "EVICT" | null>(null);
   const [activeLine, setActiveLine] = useState<number | null>(null);
+  const [history, setHistory] = useState<CacheAccess[]>([]);
+  const [running, setRunning] = useState(false);
 
   const reset = (nextMapping = mapping) => {
     setMapping(nextMapping);
@@ -693,9 +761,11 @@ function CacheLab() {
     setMisses(0);
     setLastResult(null);
     setActiveLine(null);
+    setHistory([]);
+    setRunning(false);
   };
 
-  const access = () => {
+  const access = useCallback(() => {
     if (pointer >= trace.length) return;
     const address = trace[pointer];
     let index = address % 4;
@@ -727,6 +797,8 @@ function CacheLab() {
 
     const hit = lines[index].address === address;
     const eviction = !hit && lines[index].address !== null;
+    const result = hit ? "HIT" : eviction ? "EVICT" : "MISS";
+    const evicted = eviction ? lines[index].address : null;
     setLines((current) =>
       current.map((line, lineIndex) =>
         lineIndex === index
@@ -735,10 +807,21 @@ function CacheLab() {
       ),
     );
     setActiveLine(index);
-    setLastResult(hit ? "HIT" : eviction ? "EVICT" : "MISS");
+    setLastResult(result);
+    setHistory((items) => [...items.slice(-5), { address, line: index, result, evicted }]);
     hit ? setHits((value) => value + 1) : setMisses((value) => value + 1);
     setPointer((value) => value + 1);
-  };
+  }, [lines, mapping, pointer, trace]);
+
+  useEffect(() => {
+    if (!running) return;
+    if (pointer >= trace.length) {
+      setRunning(false);
+      return;
+    }
+    const timer = window.setTimeout(access, 600);
+    return () => window.clearTimeout(timer);
+  }, [access, pointer, running, trace.length]);
 
   const total = hits + misses;
 
@@ -750,8 +833,12 @@ function CacheLab() {
         actions={
           <>
             <button onClick={() => reset()}><RotateCcw size={14} /> Reset</button>
-            <button className="lab-run" onClick={access} disabled={pointer >= trace.length}>
-              <Play size={13} fill="currentColor" /> Access next
+            <button onClick={() => { setRunning(false); access(); }} disabled={pointer >= trace.length}>
+              <StepForward size={13} /> Step
+            </button>
+            <button className="lab-run" onClick={() => setRunning((value) => !value)} disabled={pointer >= trace.length}>
+              {running ? <Pause size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" />}
+              {running ? "Pause" : "Run trace"}
             </button>
           </>
         }
@@ -778,6 +865,13 @@ function CacheLab() {
                 if (values.length) {
                   setTrace(values);
                   setPointer(0);
+                  setLines(Array.from({ length: 4 }, () => ({ tag: null, address: null, age: 0 })));
+                  setHits(0);
+                  setMisses(0);
+                  setLastResult(null);
+                  setActiveLine(null);
+                  setHistory([]);
+                  setRunning(false);
                 }
               }}
             />
@@ -816,6 +910,23 @@ function CacheLab() {
               </div>
             ))}
           </div>
+          <div className="cache-access-log">
+            <div className="history-head">
+              <span>ACCESS BUS</span>
+              <strong>{running ? "streaming trace" : `${pointer} / ${trace.length} resolved`}</strong>
+            </div>
+            <div>
+              {history.length === 0 && <small>Step or run the trace to watch addresses map into cache lines.</small>}
+              {history.map((item, index) => (
+                <span className={item.result.toLowerCase()} key={`${item.address}-${index}`}>
+                  <b>{item.address}</b>
+                  <i>LINE {item.line}</i>
+                  <strong>{item.result}</strong>
+                  <small>{item.evicted === null ? "no eviction" : `evicted ${item.evicted}`}</small>
+                </span>
+              ))}
+            </div>
+          </div>
           <div className="cache-metrics">
             <div><span>HITS</span><strong>{hits}</strong></div>
             <div><span>MISSES</span><strong>{misses}</strong></div>
@@ -828,26 +939,70 @@ function CacheLab() {
   );
 }
 
+type BranchPattern = "loop" | "alternating" | "mostly-not";
+
+const BRANCH_PATTERNS: Record<BranchPattern, { label: string; outcomes: boolean[] }> = {
+  loop: { label: "Loop exit", outcomes: [true, true, true, true, false] },
+  alternating: { label: "Alternating", outcomes: [true, false, true, false, true, false] },
+  "mostly-not": { label: "Mostly not", outcomes: [false, false, true, false, false, false] },
+};
+
 function BranchLab() {
   const [mode, setMode] = useState<"static" | "one" | "two">("two");
   const [counter, setCounter] = useState(2);
   const [history, setHistory] = useState<Array<{ prediction: boolean; actual: boolean; correct: boolean }>>([]);
+  const [pattern, setPattern] = useState<BranchPattern>("loop");
+  const [patternIndex, setPatternIndex] = useState(0);
+  const [running, setRunning] = useState(false);
 
   const prediction = mode === "static" ? true : mode === "one" ? counter >= 2 : counter >= 2;
-  const record = (actual: boolean) => {
+  const record = useCallback((actual: boolean) => {
     const correct = prediction === actual;
     setHistory((items) => [...items.slice(-11), { prediction, actual, correct }]);
     if (mode === "one") setCounter(actual ? 3 : 0);
     if (mode === "two") setCounter((value) => Math.max(0, Math.min(3, value + (actual ? 1 : -1))));
-  };
+  }, [mode, prediction]);
   const correct = history.filter((item) => item.correct).length;
+  const lastBranch = history.at(-1);
+  const patternMeta = BRANCH_PATTERNS[pattern];
+
+  useEffect(() => {
+    if (!running) return;
+    if (history.length >= 12) {
+      setRunning(false);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      record(patternMeta.outcomes[patternIndex % patternMeta.outcomes.length]);
+      setPatternIndex((value) => value + 1);
+    }, 650);
+    return () => window.clearTimeout(timer);
+  }, [history.length, patternIndex, patternMeta.outcomes, record, running]);
+
+  const resetBranch = () => {
+    setCounter(2);
+    setHistory([]);
+    setPatternIndex(0);
+    setRunning(false);
+  };
 
   return (
     <>
       <WorkbenchHeader
         label="DYNAMIC BRANCH PREDICTOR"
         status={`${mode === "two" ? "2-bit saturating counter" : mode === "one" ? "1-bit last outcome" : "Static taken"}`}
-        actions={<button onClick={() => { setCounter(2); setHistory([]); }}><RotateCcw size={14} /> Reset</button>}
+        actions={
+          <>
+            <button onClick={resetBranch}><RotateCcw size={14} /> Reset</button>
+            <button className="lab-run" onClick={() => {
+              if (!running && history.length >= 12) resetBranch();
+              setRunning((value) => !value);
+            }}>
+              {running ? <Pause size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" />}
+              {running ? "Pause" : "Run pattern"}
+            </button>
+          </>
+        }
       />
       <div className="branch-layout">
         <aside className="lab-controls">
@@ -861,7 +1016,7 @@ function BranchLab() {
               <button
                 className={mode === value ? "active" : ""}
                 key={value}
-                onClick={() => { setMode(value as typeof mode); setCounter(2); setHistory([]); }}
+                onClick={() => { setMode(value as typeof mode); resetBranch(); }}
               >
                 <CircleDot size={14} /> {label}
               </button>
@@ -871,7 +1026,20 @@ function BranchLab() {
             <span>BRANCH AT 0x3C</span>
             <code>if (x &gt; 10) goto LOOP</code>
           </div>
-          <p className="control-note">Choose the actual outcome. The predictor updates after every branch.</p>
+          <span className="control-label branch-pattern-label">OUTCOME PATTERN</span>
+          <div className="branch-patterns">
+            {(Object.entries(BRANCH_PATTERNS) as Array<[BranchPattern, typeof patternMeta]>).map(([id, item]) => (
+              <button
+                className={pattern === id ? "active" : ""}
+                key={id}
+                onClick={() => { setPattern(id); resetBranch(); }}
+              >
+                <strong>{item.label}</strong>
+                <code>{item.outcomes.map((outcome) => outcome ? "T" : "N").join(" ")}</code>
+              </button>
+            ))}
+          </div>
+          <p className="control-note">Resolve one outcome manually or run a pattern and watch the predictor learn.</p>
         </aside>
         <div className="branch-stage">
           <div className="prediction-display">
@@ -893,8 +1061,24 @@ function BranchLab() {
           <div className="actual-controls">
             <span>WHAT ACTUALLY HAPPENS?</span>
             <div>
-              <button onClick={() => record(true)}><ArrowRight size={18} /> Taken</button>
-              <button onClick={() => record(false)}><ArrowRight size={18} /> Not taken</button>
+              <button onClick={() => { setRunning(false); record(true); }}><ArrowRight size={18} /> Taken</button>
+              <button onClick={() => { setRunning(false); record(false); }}><ArrowRight size={18} /> Not taken</button>
+            </div>
+          </div>
+          <div className={`branch-resolution ${lastBranch ? (lastBranch.correct ? "correct" : "wrong") : ""}`}>
+            <div>
+              <span>SPECULATIVE PATH</span>
+              <strong>{lastBranch ? (lastBranch.prediction ? "FETCH TARGET" : "FETCH NEXT") : "WAITING"}</strong>
+            </div>
+            <ArrowRight size={18} />
+            <div>
+              <span>BRANCH RESOLVES</span>
+              <strong>{lastBranch ? (lastBranch.actual ? "TAKEN" : "NOT TAKEN") : "—"}</strong>
+            </div>
+            <ArrowRight size={18} />
+            <div>
+              <span>PIPELINE ACTION</span>
+              <strong>{lastBranch ? (lastBranch.correct ? "KEEP WORK" : "FLUSH 5 STAGES") : "—"}</strong>
             </div>
           </div>
           <div className="branch-history">
@@ -947,6 +1131,7 @@ const BUILDER_CHALLENGES: Record<
     objective: string;
     requiredNodes: CpuComponentId[];
     requiredEdges: string[];
+    flow: CpuComponentId[];
   }
 > = {
   arithmetic: {
@@ -963,6 +1148,7 @@ const BUILDER_CHALLENGES: Record<
       "mux>alu",
       "alu>registers",
     ],
+    flow: ["pc", "imem", "decoder", "registers", "mux", "alu", "registers"],
   },
   load: {
     title: "Load datapath",
@@ -979,6 +1165,7 @@ const BUILDER_CHALLENGES: Record<
       "alu>memory",
       "memory>registers",
     ],
+    flow: ["pc", "imem", "decoder", "registers", "mux", "alu", "memory", "registers"],
   },
 };
 
@@ -989,6 +1176,8 @@ function CpuBuilder() {
   const [selectedSource, setSelectedSource] = useState<CpuComponentId | null>(null);
   const [testResult, setTestResult] = useState<"idle" | "pass" | "fail">("idle");
   const [testMessage, setTestMessage] = useState("Place components, then click a source block and a destination block to create each bus.");
+  const [executionStep, setExecutionStep] = useState(-1);
+  const [executing, setExecuting] = useState(false);
   const challenge = BUILDER_CHALLENGES[challengeId];
   const missingNodes = challenge.requiredNodes.filter((component) => !components.includes(component));
   const missingEdges = challenge.requiredEdges.filter((edge) => !edges.includes(edge));
@@ -1007,6 +1196,8 @@ function CpuBuilder() {
     setSelectedSource(null);
     setTestResult("idle");
     setTestMessage("Place components, then click a source block and a destination block to create each bus.");
+    setExecutionStep(-1);
+    setExecuting(false);
   };
 
   const addComponent = (id: CpuComponentId) => {
@@ -1015,6 +1206,8 @@ function CpuBuilder() {
       setTestMessage(`${componentFor(id).short} placed. Select it and another block to create a directed bus.`);
     }
     setTestResult("idle");
+    setExecutionStep(-1);
+    setExecuting(false);
   };
 
   const removeComponent = (id: CpuComponentId) => {
@@ -1023,6 +1216,8 @@ function CpuBuilder() {
     if (selectedSource === id) setSelectedSource(null);
     setTestResult("idle");
     setTestMessage(`${componentFor(id).short} removed with its attached buses.`);
+    setExecutionStep(-1);
+    setExecuting(false);
   };
 
   const selectNode = (id: CpuComponentId) => {
@@ -1046,26 +1241,58 @@ function CpuBuilder() {
     }
     setSelectedSource(null);
     setTestResult("idle");
+    setExecutionStep(-1);
+    setExecuting(false);
   };
 
   const testCpu = () => {
     if (missingNodes.length) {
       setTestResult("fail");
       setTestMessage(`Missing components: ${missingNodes.map((id) => componentFor(id).short).join(", ")}.`);
+      setExecutionStep(-1);
+      setExecuting(false);
       return;
     }
     if (incorrectEdges.length) {
       setTestResult("fail");
       setTestMessage(`Incorrect bus${incorrectEdges.length > 1 ? "es" : ""}: ${incorrectEdges.map(edgeLabel).join(", ")}.`);
+      setExecutionStep(-1);
+      setExecuting(false);
       return;
     }
     if (missingEdges.length) {
       setTestResult("fail");
       setTestMessage(`The path is incomplete. ${missingEdges.length} required bus${missingEdges.length > 1 ? "es are" : " is"} still missing.`);
+      setExecutionStep(-1);
+      setExecuting(false);
       return;
     }
     setTestResult("pass");
     setTestMessage(`${challenge.instruction} can travel through every required stage and return its result correctly.`);
+    setExecutionStep(0);
+    setExecuting(false);
+  };
+
+  useEffect(() => {
+    if (!executing || testResult !== "pass") return;
+    if (executionStep >= challenge.flow.length - 1) {
+      setExecuting(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setExecutionStep((value) => value + 1), 600);
+    return () => window.clearTimeout(timer);
+  }, [challenge.flow.length, executing, executionStep, testResult]);
+
+  const stepSignal = () => {
+    if (testResult !== "pass") return;
+    setExecuting(false);
+    setExecutionStep((value) => value < 0 || value >= challenge.flow.length - 1 ? 0 : value + 1);
+  };
+
+  const runSignal = () => {
+    if (testResult !== "pass") return;
+    if (!executing && executionStep >= challenge.flow.length - 1) setExecutionStep(0);
+    setExecuting((value) => !value);
   };
 
   return (
@@ -1076,8 +1303,11 @@ function CpuBuilder() {
         actions={
           <>
             <button onClick={() => reset()}><Trash2 size={14} /> Reset</button>
-            <button className="lab-run" onClick={testCpu}>
-              <Play size={13} fill="currentColor" /> Test CPU
+            <button onClick={testCpu}><Check size={13} /> Validate</button>
+            <button onClick={stepSignal} disabled={testResult !== "pass"}><StepForward size={13} /> Step signal</button>
+            <button className="lab-run" onClick={runSignal} disabled={testResult !== "pass"}>
+              {executing ? <Pause size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" />}
+              {executing ? "Pause" : "Run instruction"}
             </button>
           </>
         }
@@ -1117,7 +1347,24 @@ function CpuBuilder() {
           <div className="builder-instructions">
             <span><b>1</b> Place the blocks required by the instruction.</span>
             <span><b>2</b> Click a source block, then its destination.</span>
-            <span><b>3</b> Test the completed datapath and diagnose errors.</span>
+            <span><b>3</b> Validate it, then step a signal through every stage.</span>
+          </div>
+          <div className={`instruction-flight ${testResult === "pass" ? "ready" : ""}`}>
+            <div>
+              <span>INSTRUCTION FLIGHT</span>
+              <strong>{testResult === "pass" ? challenge.instruction : "Datapath must pass validation first"}</strong>
+            </div>
+            <div>
+              {challenge.flow.map((id, index) => (
+                <span
+                  className={index === executionStep ? "active" : index < executionStep ? "complete" : ""}
+                  key={`${id}-${index}`}
+                >
+                  <b>{componentFor(id).short}</b>
+                  {index < challenge.flow.length - 1 && <ArrowRight size={11} />}
+                </span>
+              ))}
+            </div>
           </div>
           <div className="builder-canvas">
             <div className="builder-grid">
@@ -1131,8 +1378,10 @@ function CpuBuilder() {
               {components.map((id, index) => {
                 const component = componentFor(id);
                 const outgoing = edges.filter((edge) => edge.startsWith(`${id}>`));
+                const signalActive = testResult === "pass" && challenge.flow[executionStep] === id;
+                const signalPassed = testResult === "pass" && challenge.flow.slice(0, executionStep + 1).includes(id);
                 return (
-                  <div className={`builder-node-wrap ${selectedSource === id ? "selected" : ""}`} key={id}>
+                  <div className={`builder-node-wrap ${selectedSource === id ? "selected" : ""} ${signalPassed ? "signal-passed" : ""} ${signalActive ? "signal-active" : ""}`} key={id}>
                     <button className="builder-node" onClick={() => selectNode(id)}>
                       <small>{String(index + 1).padStart(2, "0")}</small>
                       <span className="node-port input-port">IN</span>
@@ -1163,6 +1412,8 @@ function CpuBuilder() {
                     onClick={() => {
                       setEdges((items) => items.filter((item) => item !== edge));
                       setTestResult("idle");
+                      setExecutionStep(-1);
+                      setExecuting(false);
                     }}
                     aria-label={`Remove bus ${edgeLabel(edge)}`}
                   >
@@ -1244,6 +1495,9 @@ function PerformanceLab() {
   const [width, setWidth] = useState(2);
   const [cacheHit, setCacheHit] = useState(92);
   const [branchAccuracy, setBranchAccuracy] = useState(90);
+  const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [samples, setSamples] = useState<number[]>([]);
 
   const profile = {
     general: { instructions: 1000, memory: 0.24, branches: 0.16 },
@@ -1258,12 +1512,59 @@ function PerformanceLab() {
   const ipc = 1 / cpi;
   const runtime = cycles / (clock * 1_000_000_000);
   const score = Math.max(5, Math.min(100, Math.round(100 / (cpi + 0.45))));
+  const phase = progress === 0
+    ? "READY"
+    : progress < 15
+      ? "WARMING CACHE"
+      : progress < 85
+        ? "EXECUTING"
+        : progress < 100
+          ? "DRAINING PIPELINE"
+          : "REPORT READY";
+  const completedInstructions = Math.round(profile.instructions * (progress / 100));
+
+  useEffect(() => {
+    if (!running) return;
+    if (progress >= 100) {
+      setRunning(false);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setProgress((value) => Math.min(100, value + 5));
+      const variation = 0.86 + ((progress / 5) % 5) * 0.035;
+      setSamples((items) => [...items.slice(-17), Math.min(width, ipc * variation)]);
+    }, 140);
+    return () => window.clearTimeout(timer);
+  }, [ipc, progress, running, width]);
+
+  const resetBenchmark = () => {
+    setRunning(false);
+    setProgress(0);
+    setSamples([]);
+  };
+
+  const toggleBenchmark = () => {
+    if (!running && progress >= 100) {
+      setProgress(0);
+      setSamples([]);
+    }
+    setRunning((value) => !value);
+  };
 
   return (
     <>
       <WorkbenchHeader
         label="MICROARCHITECTURE TUNER"
-        status={`${profile.instructions.toLocaleString()} instruction benchmark · live model`}
+        status={`${profile.instructions.toLocaleString()} instruction benchmark · ${phase.toLowerCase()}`}
+        actions={
+          <>
+            <button onClick={resetBenchmark}><RotateCcw size={14} /> Reset</button>
+            <button className="lab-run" onClick={toggleBenchmark}>
+              {running ? <Pause size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" />}
+              {running ? "Pause" : progress >= 100 ? "Run again" : "Run benchmark"}
+            </button>
+          </>
+        }
       />
       <div className="performance-layout">
         <aside className="lab-controls">
@@ -1282,6 +1583,23 @@ function PerformanceLab() {
           <RangeControl label="Branch accuracy" value={branchAccuracy} min={50} max={100} unit="%" onChange={setBranchAccuracy} />
         </aside>
         <div className="performance-stage">
+          <div className={`benchmark-runner ${running ? "running" : ""}`}>
+            <div className="benchmark-head">
+              <div><span>BENCHMARK ENGINE</span><strong>{phase}</strong></div>
+              <div><span>RETIRED</span><strong>{completedInstructions.toLocaleString()} / {profile.instructions.toLocaleString()}</strong></div>
+              <div><span>LIVE IPC</span><strong>{samples.length ? samples.at(-1)!.toFixed(2) : "—"}</strong></div>
+            </div>
+            <div className="benchmark-progress">
+              <i style={{ width: `${progress}%` }} />
+              <span style={{ left: `${Math.min(98, progress)}%` }}>{progress}%</span>
+            </div>
+            <div className="sample-bars" aria-label="Live instructions per cycle samples">
+              {Array.from({ length: 18 }, (_, index) => {
+                const sample = samples[index];
+                return <i key={index} style={{ height: sample ? `${Math.max(8, (sample / width) * 100)}%` : "8%" }} />;
+              })}
+            </div>
+          </div>
           <div className="score-card">
             <div>
               <span>PERFORMANCE SCORE</span>
