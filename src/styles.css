@@ -2210,6 +2210,48 @@ footer > div:last-child a {
   color: var(--lab-accent);
 }
 
+.binary-equation code.binary-word {
+  display: grid;
+  gap: 5px;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  letter-spacing: 0;
+}
+
+.binary-word > span {
+  align-items: center;
+  border: 1px solid transparent;
+  color: #f1f5f1;
+  display: flex;
+  font-family: var(--mono);
+  font-size: inherit;
+  height: 28px;
+  justify-content: center;
+  line-height: 1;
+  min-width: 0;
+}
+
+.binary-word.result > span.pending {
+  color: rgba(255, 255, 255, 0.18);
+}
+
+.binary-word.result > span.revealed {
+  color: var(--lab-accent);
+}
+
+.binary-word > span.current {
+  animation: binaryCursor 420ms steps(2, end) infinite;
+  background: var(--lab-accent);
+  border-color: var(--lab-accent);
+  color: var(--ink);
+}
+
+@keyframes binaryCursor {
+  50% {
+    background: color-mix(in srgb, var(--lab-accent) 62%, #101411);
+    box-shadow: inset 0 0 0 2px var(--lab-accent);
+  }
+}
+
 .bit-labels {
   display: grid;
   gap: 6px;
@@ -4777,6 +4819,20 @@ footer > div:last-child a {
 
   .binary-equation code {
     font-size: 16px;
+  }
+
+  .binary-equation {
+    gap: 7px 10px;
+    grid-template-columns: 22px minmax(0, 1fr);
+  }
+
+  .binary-equation code.binary-word {
+    gap: 2px;
+  }
+
+  .binary-word > span {
+    font-size: 14px;
+    height: 25px;
   }
 
   .bit-labels {

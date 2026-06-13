@@ -350,11 +350,45 @@ const ALU_OPERATIONS: Array<{
   { id: "SHR", name: "Shift right", symbol: ">>", description: "Moves bits right, inserts zero, and discards bit 0.", usesRight: false },
 ];
 
+function BinaryWord({
+  value,
+  activeBit,
+  reveal = false,
+}: {
+  value: number;
+  activeBit: number;
+  reveal?: boolean;
+}) {
+  return (
+    <code
+      className={`binary-word ${reveal ? "result" : ""}`}
+      aria-label={reveal && activeBit < 0 ? "Result pending" : byte(value)}
+    >
+      {byte(value).split("").map((digit, index) => {
+        const bit = 7 - index;
+        const isCurrent = bit === activeBit;
+        const isRevealed = !reveal || (activeBit >= 0 && bit <= activeBit);
+
+        return (
+          <span
+            className={`${isCurrent ? "current" : ""} ${
+              reveal ? (isRevealed ? "revealed" : "pending") : ""
+            }`}
+            key={bit}
+          >
+            {reveal ? (isRevealed ? digit : "·") : digit}
+          </span>
+        );
+      })}
+    </code>
+  );
+}
+
 function AluExplorer() {
   const [left, setLeft] = useState(10);
   const [right, setRight] = useState(20);
   const [operation, setOperation] = useState<AluOperation>("ADD");
-  const [activeBit, setActiveBit] = useState(0);
+  const [activeBit, setActiveBit] = useState(-1);
   const [running, setRunning] = useState(false);
   const operationMeta = ALU_OPERATIONS.find((item) => item.id === operation)!;
 
@@ -418,19 +452,19 @@ function AluExplorer() {
   const equation = operationMeta.usesRight
     ? `${left} ${operationMeta.symbol} ${right} = ${calculation.result}`
     : `${operationMeta.symbol}${left} = ${calculation.result}`;
-  const activeCell = calculation.bits[activeBit];
+  const activeCell = calculation.bits[Math.max(activeBit, 0)];
 
   const reset = () => {
     setLeft(10);
     setRight(20);
     setOperation("ADD");
-    setActiveBit(0);
+    setActiveBit(-1);
     setRunning(false);
   };
 
   const step = () => {
     setRunning(false);
-    setActiveBit((value) => (value + 1) % 8);
+    setActiveBit((value) => (value < 0 || value >= 7 ? 0 : value + 1));
   };
 
   useEffect(() => {
@@ -448,7 +482,7 @@ function AluExplorer() {
       setRunning(false);
       return;
     }
-    if (activeBit >= 7) setActiveBit(0);
+    if (activeBit < 0 || activeBit >= 7) setActiveBit(0);
     setRunning(true);
   };
 
@@ -464,7 +498,11 @@ function AluExplorer() {
     <>
       <WorkbenchHeader
         label="8-BIT ARITHMETIC LOGIC UNIT"
-        status={`${operationMeta.name} selected · result ${calculation.result}`}
+        status={
+          activeBit < 0
+            ? `${operationMeta.name} selected · result register clear`
+            : `${operationMeta.name} · resolving bit ${activeBit}`
+        }
         actions={
           <>
             <button onClick={reset}><RotateCcw size={14} /> Reset</button>
@@ -486,7 +524,7 @@ function AluExplorer() {
                 key={item.id}
                 onClick={() => {
                   setOperation(item.id);
-                  setActiveBit(0);
+                  setActiveBit(-1);
                   setRunning(false);
                 }}
               >
@@ -496,8 +534,8 @@ function AluExplorer() {
             ))}
           </div>
           <span className="control-label operand-heading">OPERANDS</span>
-          <NumberControl label="INPUT A" value={left} onChange={(value) => { setLeft(value); setActiveBit(0); setRunning(false); }} />
-          <NumberControl label="INPUT B" value={right} onChange={(value) => { setRight(value); setActiveBit(0); setRunning(false); }} disabled={!operationMeta.usesRight} />
+          <NumberControl label="INPUT A" value={left} onChange={(value) => { setLeft(value); setActiveBit(-1); setRunning(false); }} />
+          <NumberControl label="INPUT B" value={right} onChange={(value) => { setRight(value); setActiveBit(-1); setRunning(false); }} disabled={!operationMeta.usesRight} />
           <div className="equation-card">
             <span>DECIMAL RESULT</span>
             <strong>{equation}</strong>
@@ -513,11 +551,11 @@ function AluExplorer() {
 
         <div className="adder-stage">
           <div className="binary-equation">
-            <span>A</span><code>{byte(left)}</code>
-            {operationMeta.usesRight && <><span>B</span><code>{byte(right)}</code></>}
+            <span>A</span><BinaryWord value={left} activeBit={activeBit} />
+            {operationMeta.usesRight && <><span>B</span><BinaryWord value={right} activeBit={activeBit} /></>}
             <span>OP</span><code className="operation-code">{operationMeta.name.toUpperCase()}</code>
             <i />
-            <span>R</span><code className="result">{byte(calculation.result)}</code>
+            <span>R</span><BinaryWord value={calculation.result} activeBit={activeBit} reveal />
           </div>
           <div className="bit-labels">
             {calculation.bits.slice().reverse().map(({ bit }) => <span key={bit}>BIT {bit}</span>)}
@@ -529,7 +567,10 @@ function AluExplorer() {
                   cell.bit === activeBit ? "current" : ""
                 }`}
                 key={cell.bit}
-                onClick={() => setActiveBit(cell.bit)}
+                onClick={() => {
+                  setRunning(false);
+                  setActiveBit(cell.bit);
+                }}
                 aria-label={`Inspect bit ${cell.bit}`}
               >
                 <span className="carry-in">
@@ -555,11 +596,19 @@ function AluExplorer() {
           </div>
           <div className="gate-inspector">
             <div>
-              <span>INSPECTING BIT {activeBit} · {operationMeta.name.toUpperCase()}</span>
-              <strong>{inspectorEquation}</strong>
+              <span>
+                {activeBit < 0
+                  ? "BIT CURSOR READY"
+                  : `INSPECTING BIT ${activeBit} · ${operationMeta.name.toUpperCase()}`}
+              </span>
+              <strong>
+                {activeBit < 0 ? "Press Step bit or Run bits to begin" : inspectorEquation}
+              </strong>
             </div>
             <p>
-              {isArithmetic
+              {activeBit < 0
+                ? "Inputs are loaded. The result register will fill from bit 0 to bit 7 as each gate column resolves."
+                : isArithmetic
                 ? operation === "SUB"
                   ? `B is inverted and the initial carry-in is 1. This implements A + NOT B + 1, the two's-complement form of subtraction.`
                   : `Carry-out ${activeCell.carryOut} becomes the carry-in for the next bit, creating the ripple-carry path.`
